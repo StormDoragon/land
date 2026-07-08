@@ -41,19 +41,30 @@ interface CellInfo {
   forSalePrice?: number | null;
 }
 
+export interface MapFocus {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
 export function MapExplorer({
   user,
   variant = "full",
+  initialFocus,
+  focusLabel = null,
 }: {
   user: { displayName: string } | null;
   variant?: "full" | "embed";
+  initialFocus?: MapFocus;
+  focusLabel?: string | null;
 }) {
+  const focus = initialFocus ?? { lat: 20, lng: 0, zoom: 3 };
   const router = useRouter();
   const [plots, setPlots] = useState<SoldPlot[]>([]);
   const [selected, setSelected] = useState<SelectedCell | null>(null);
   const [cell, setCell] = useState<CellInfo | null>(null);
   const [bounds, setBounds] = useState<CellBounds | null>(null);
-  const [zoom, setZoom] = useState(3);
+  const [zoom, setZoom] = useState(focus.zoom);
   const [flyTo, setFlyTo] = useState<FlyTarget | null>(null);
   const [loadingCell, setLoadingCell] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -227,6 +238,19 @@ export function MapExplorer({
     };
   }, []);
 
+  // The map mounts already centered on `focus`; only animate when it *changes*
+  // (e.g. the visitor picks a different country in the header dropdown).
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    setSelected(null);
+    setCell(null);
+    setFlyTo({ lat: focus.lat, lng: focus.lng, zoom: focus.zoom, nonce: Date.now() });
+  }, [focus.lat, focus.lng, focus.zoom]);
+
   const rootClass =
     variant === "full"
       ? "relative w-full h-[calc(100vh-3.5rem)]"
@@ -240,6 +264,8 @@ export function MapExplorer({
         currentBounds={bounds}
         currentZoom={zoom}
         flyTo={flyTo}
+        initialCenter={[focus.lat, focus.lng]}
+        initialZoom={focus.zoom}
         onSelect={selectCell}
         onBoundsChange={onBoundsChange}
       />
@@ -253,6 +279,9 @@ export function MapExplorer({
       {!selected && (
         <div className="pointer-events-none absolute left-4 bottom-6 z-[500] max-w-sm">
           <div className="card p-4 pointer-events-auto">
+            {focusLabel && (
+              <div className="pill mb-2">📍 Showing {focusLabel}</div>
+            )}
             <div className="text-sm font-semibold mb-1">
               Own a visible piece of the internet 🌐
             </div>
@@ -260,6 +289,7 @@ export function MapExplorer({
               Zoom into any city and click a plot to claim it. Plots start at{" "}
               <span className="text-[var(--cyan)] font-semibold">$5</span>. Add your name,
               link and message — then resell your verified digital asset.
+              {focusLabel && " Use the country menu in the header to switch countries or go global."}
             </p>
           </div>
         </div>

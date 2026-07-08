@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { LogoutButton } from "./LogoutButton";
+import { CountrySelect } from "./CountrySelect";
+
+interface CountryChip {
+  code: string;
+  name: string;
+}
 
 export function Header({
   user,
+  country,
+  detected,
 }: {
   user: { displayName: string; email: string } | null;
+  country: CountryChip | null;
+  detected: CountryChip | null;
 }) {
   return (
     <header className="sticky top-0 z-[1000] backdrop-blur-md bg-[rgba(5,8,22,0.72)] border-b border-[rgba(103,232,249,0.14)]">
@@ -23,6 +33,7 @@ export function Header({
         </nav>
 
         <div className="flex items-center gap-2">
+          <CountrySelect current={country} detected={detected} />
           {user ? (
             <>
               <span className="hidden sm:inline text-sm text-[var(--muted)]">

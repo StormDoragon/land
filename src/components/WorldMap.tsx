@@ -60,6 +60,18 @@ function MapEvents({
   onSelect: (cell: SelectedCell) => void;
   onBoundsChange: (bounds: CellBounds, zoom: number) => void;
 }) {
+  const emit = (map: ReturnType<typeof useMap>) => {
+    const b = map.getBounds();
+    onBoundsChange(
+      {
+        south: b.getSouth(),
+        west: b.getWest(),
+        north: b.getNorth(),
+        east: b.getEast(),
+      },
+      map.getZoom(),
+    );
+  };
   const map = useMapEvents({
     click(e) {
       onSelect({
@@ -68,18 +80,14 @@ function MapEvents({
       });
     },
     moveend() {
-      const b = map.getBounds();
-      onBoundsChange(
-        {
-          south: b.getSouth(),
-          west: b.getWest(),
-          north: b.getNorth(),
-          east: b.getEast(),
-        },
-        map.getZoom(),
-      );
+      emit(map);
     },
   });
+  // Load plots for the initial viewport too, not only after the first move.
+  useEffect(() => {
+    emit(map);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
   return null;
 }
 
@@ -126,6 +134,8 @@ export default function WorldMap({
   currentBounds,
   currentZoom,
   flyTo,
+  initialCenter,
+  initialZoom,
   onSelect,
   onBoundsChange,
 }: {
@@ -134,13 +144,15 @@ export default function WorldMap({
   currentBounds: CellBounds | null;
   currentZoom: number;
   flyTo: FlyTarget | null;
+  initialCenter: [number, number];
+  initialZoom: number;
   onSelect: (cell: SelectedCell) => void;
   onBoundsChange: (bounds: CellBounds, zoom: number) => void;
 }) {
   return (
     <MapContainer
-      center={[30, 10]}
-      zoom={3}
+      center={initialCenter}
+      zoom={initialZoom}
       minZoom={2}
       maxZoom={19}
       worldCopyJump

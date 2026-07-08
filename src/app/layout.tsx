@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { getSession } from "@/lib/auth";
+import { getCountryScope } from "@/lib/geo";
 
 export const metadata: Metadata = {
   title: "APlotInWeb — Own a Visible Piece of the Internet",
@@ -14,7 +15,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession();
+  const [session, scope] = await Promise.all([getSession(), getCountryScope()]);
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
@@ -22,6 +23,16 @@ export default async function RootLayout({
           user={
             session
               ? { displayName: session.displayName, email: session.email }
+              : null
+          }
+          country={
+            scope.country
+              ? { code: scope.country.code, name: scope.country.name }
+              : null
+          }
+          detected={
+            scope.detected
+              ? { code: scope.detected.code, name: scope.detected.name }
               : null
           }
         />

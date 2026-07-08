@@ -2,6 +2,8 @@ import Link from "next/link";
 import { MapExplorer } from "@/components/MapExplorer";
 import { PricingGrid } from "@/components/PricingGrid";
 import { getSession } from "@/lib/auth";
+import { getCountryScope } from "@/lib/geo";
+import { focusForCountry } from "@/lib/countries";
 import { prisma } from "@/lib/prisma";
 import { TIERS } from "@/lib/grid";
 
@@ -9,6 +11,8 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const session = await getSession();
+  const scope = await getCountryScope();
+  const focus = focusForCountry(scope.country?.code);
 
   const [plotCount, locations, featured] = await Promise.all([
     prisma.plot.count(),
@@ -66,6 +70,7 @@ export default async function HomePage() {
             <MapExplorer
               user={session ? { displayName: session.displayName } : null}
               variant="embed"
+              initialFocus={focus}
             />
           </div>
         </div>

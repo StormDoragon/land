@@ -1,0 +1,17 @@
+# Optional: local Postgres for development.
+# Start with:  docker compose up -d
+# Then set DATABASE_URL="postgresql://land:land@127.0.0.1:5432/land?schema=public"
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: land
+      POSTGRES_PASSWORD: land
+      POSTGRES_DB: land
+    ports:
+      - "5432:5432"
+    volumes:
+      - land_pgdata:/var/lib/postgresql/data
+volumes:
+  land_pgdata:

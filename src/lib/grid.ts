@@ -6,6 +6,10 @@
 // computed on the fly, so we never enumerate the billions of possible cells.
 
 export const CELL_SIZE = 0.001; // ~111m x ~111m near the equator — one "plot"
+export const MIN_LAT = -90;
+export const MAX_LAT = 90;
+export const MIN_LNG = -180;
+export const MAX_LNG = 180;
 
 // Ownership tiers. A fresh plot starts at BASIC ($5); higher tiers unlock richer
 // visibility. `color` drives how the plot renders on the map.
@@ -111,6 +115,23 @@ export function latToGridY(lat: number): number {
 }
 
 /** Snap an arbitrary (lat, lng) click to the cell that contains it. */
+export function isValidLatLng(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= MIN_LAT &&
+    lat <= MAX_LAT &&
+    lng >= MIN_LNG &&
+    lng <= MAX_LNG
+  );
+}
+
+export function isValidGridCell(gridX: number, gridY: number): boolean {
+  if (!Number.isInteger(gridX) || !Number.isInteger(gridY)) return false;
+  const cell = cellFromIndices(gridX, gridY);
+  return isValidLatLng(cell.centerLat, cell.centerLng);
+}
+
 export function cellFromLatLng(lat: number, lng: number): Cell {
   return cellFromIndices(lngToGridX(lng), latToGridY(lat));
 }
@@ -157,10 +178,14 @@ export function cellsInBounds(
   b: CellBounds,
   cap = 5000,
 ): { gridX: number; gridY: number }[] {
-  const x0 = lngToGridX(b.west);
-  const x1 = lngToGridX(b.east);
-  const y0 = latToGridY(b.south);
-  const y1 = latToGridY(b.north);
+  const west = Math.max(MIN_LNG, Math.min(MAX_LNG, b.west));
+  const east = Math.max(MIN_LNG, Math.min(MAX_LNG, b.east));
+  const south = Math.max(MIN_LAT, Math.min(MAX_LAT, b.south));
+  const north = Math.max(MIN_LAT, Math.min(MAX_LAT, b.north));
+  const x0 = lngToGridX(Math.min(west, east));
+  const x1 = lngToGridX(Math.max(west, east));
+  const y0 = latToGridY(Math.min(south, north));
+  const y1 = latToGridY(Math.max(south, north));
   const cells: { gridX: number; gridY: number }[] = [];
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {

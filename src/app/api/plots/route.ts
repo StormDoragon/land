@@ -10,14 +10,22 @@ export async function GET(req: Request) {
   const maxLat = Number(searchParams.get("maxLat"));
   const maxLng = Number(searchParams.get("maxLng"));
 
-  if ([minLat, minLng, maxLat, maxLng].some((n) => Number.isNaN(n))) {
+  if ([minLat, minLng, maxLat, maxLng].some((n) => !Number.isFinite(n))) {
     return NextResponse.json({ error: "Invalid bounds" }, { status: 400 });
   }
 
+  const south = Math.max(-90, Math.min(minLat, maxLat));
+  const north = Math.min(90, Math.max(minLat, maxLat));
+  const west = Math.max(-180, Math.min(180, minLng));
+  const east = Math.max(-180, Math.min(180, maxLng));
+  const lngFilter = west <= east
+    ? { centerLng: { gte: west, lte: east } }
+    : { OR: [{ centerLng: { gte: west } }, { centerLng: { lte: east } }] };
+
   const plots = await prisma.plot.findMany({
     where: {
-      centerLat: { gte: minLat, lte: maxLat },
-      centerLng: { gte: minLng, lte: maxLng },
+      centerLat: { gte: south, lte: north },
+      ...lngFilter,
     },
     take: 2000,
     select: {

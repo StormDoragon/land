@@ -82,6 +82,7 @@ model Listing {
 enum TransactionType {
   PRIMARY
   RESALE
+  UPGRADE
 }
 
 model Transaction {

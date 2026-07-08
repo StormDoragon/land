@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { errorMessage, readJson } from "@/lib/api-client";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
@@ -25,9 +26,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         isRegister ? { email, displayName, password } : { email, password },
       ),
     });
-    const data = await res.json();
+    const data = await readJson(res);
     setBusy(false);
-    if (!res.ok) return setError(data.error ?? "Something went wrong.");
+    if (!res.ok) return setError(errorMessage(data, "Something went wrong."));
     router.push("/");
     router.refresh();
   }

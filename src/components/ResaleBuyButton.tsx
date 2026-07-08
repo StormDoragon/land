@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { errorMessage, readJson } from "@/lib/api-client";
 
 export function ResaleBuyButton({
   plotId,
@@ -34,9 +35,9 @@ export function ResaleBuyButton({
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/plots/${plotId}/buy-resale`, { method: "POST" });
-    const data = await res.json();
+    const data = await readJson(res);
     setBusy(false);
-    if (!res.ok) return setError(data.error ?? "Purchase failed.");
+    if (!res.ok) return setError(errorMessage(data, "Purchase failed."));
     router.push(`/plot/${plotId}`);
     router.refresh();
   }

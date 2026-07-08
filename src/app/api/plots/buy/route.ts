@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/lib/security";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { cellFromIndices, TIERS } from "@/lib/grid";
+import { cellFromIndices, isValidGridCell, TIERS } from "@/lib/grid";
 import { reverseGeocode } from "@/lib/geocode";
 
 const schema = z.object({
@@ -18,6 +19,9 @@ const schema = z.object({
 
 // POST /api/plots/buy — primary purchase of a fresh cell at the tier's price (mock checkout).
 export async function POST(req: Request) {
+  if (!(await isSameOriginRequest())) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "You must be signed in." }, { status: 401 });
@@ -28,6 +32,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
   const { gridX, gridY, tier, name, linkUrl, message, logoUrl } = parsed.data;
+  if (!isValidGridCell(gridX, gridY)) {
+    return NextResponse.json({ error: "Invalid plot location." }, { status: 400 });
+  }
   const cell = cellFromIndices(gridX, gridY);
   const tierInfo = TIERS[tier];
 

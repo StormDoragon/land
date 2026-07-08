@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/lib/security";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -51,6 +52,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!(await isSameOriginRequest())) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
 
@@ -68,8 +72,9 @@ export async function PATCH(
   }
 
   // A tier change is an upgrade only (never downgrade); it charges the difference
-  // and recolors the plot to the new tier.
+  // between the current tier and target tier, regardless of resale price.
   let tierData = {};
+  let upgradeDiff = 0;
   if (d.tier && d.tier !== plot.tier) {
     if (tierRank(d.tier) < tierRank(plot.tier)) {
       return NextResponse.json(
@@ -78,23 +83,27 @@ export async function PATCH(
       );
     }
     const newInfo = TIERS[d.tier];
-    const diff = Math.max(0, newInfo.price - plot.purchasePrice);
+    upgradeDiff = Math.max(0, newInfo.price - TIERS[plot.tier].price);
     tierData = { tier: d.tier, color: newInfo.color, purchasePrice: newInfo.price };
-    await prisma.transaction.create({
-      data: { plotId: id, buyerId: session.userId, amount: diff, type: "PRIMARY" },
-    });
   }
 
-  const updated = await prisma.plot.update({
-    where: { id },
-    data: {
-      ...(d.name !== undefined ? { name: d.name } : {}),
-      ...(d.color !== undefined ? { color: d.color } : {}),
-      ...(d.linkUrl !== undefined ? { linkUrl: d.linkUrl || null } : {}),
-      ...(d.message !== undefined ? { message: d.message || null } : {}),
-      ...(d.logoUrl !== undefined ? { logoUrl: d.logoUrl || null } : {}),
-      ...tierData,
-    },
+  const updateData = {
+    ...(d.name !== undefined ? { name: d.name } : {}),
+    ...(d.color !== undefined ? { color: d.color } : {}),
+    ...(d.linkUrl !== undefined ? { linkUrl: d.linkUrl || null } : {}),
+    ...(d.message !== undefined ? { message: d.message || null } : {}),
+    ...(d.logoUrl !== undefined ? { logoUrl: d.logoUrl || null } : {}),
+    ...tierData,
+  };
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedPlot = await tx.plot.update({ where: { id }, data: updateData });
+    if (upgradeDiff > 0) {
+      await tx.transaction.create({
+        data: { plotId: id, buyerId: session.userId, amount: upgradeDiff, type: "UPGRADE" },
+      });
+    }
+    return updatedPlot;
   });
   return NextResponse.json({
     id: updated.id,

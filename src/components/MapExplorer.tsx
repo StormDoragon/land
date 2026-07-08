@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import type { SoldPlot, SelectedCell } from "./WorldMap";
 import type { CellBounds, PlotTier } from "@/lib/grid";
 import { formatCoords, TIERS, TIER_ORDER } from "@/lib/grid";
+import { errorMessage, readJson } from "@/lib/api-client";
 
 const WorldMap = dynamic(() => import("./WorldMap"), {
   ssr: false,
@@ -60,6 +61,7 @@ export function MapExplorer({
   const [name, setName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [message, setMessage] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
   const [listPrice, setListPrice] = useState("");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,8 +75,8 @@ export function MapExplorer({
     });
     const res = await fetch(`/api/plots?${qs}`);
     if (!res.ok) return;
-    const data = await res.json();
-    setPlots(data.plots);
+    const data = await readJson<{ plots: SoldPlot[] }>(res);
+    if (data) setPlots(data.plots);
   }, []);
 
   const onBoundsChange = useCallback(
@@ -95,16 +97,22 @@ export function MapExplorer({
     setName("");
     setLinkUrl("");
     setMessage("");
+    setLogoUrl("");
     setListPrice("");
     setLoadingCell(true);
     const res = await fetch(`/api/plots/cell?x=${c.gridX}&y=${c.gridY}`);
-    const data = await res.json();
+    const data = await readJson<CellInfo>(res);
     setLoadingCell(false);
+    if (!data) {
+      setError("Could not load this plot.");
+      return;
+    }
     setCell(data);
     if (data.status === "owned") {
       setName(data.name ?? "");
       setLinkUrl(data.linkUrl ?? "");
       setMessage(data.message ?? "");
+      setLogoUrl(data.logoUrl ?? "");
     }
   }, []);
 
@@ -112,7 +120,8 @@ export function MapExplorer({
     if (bounds) await loadPlots(bounds);
     if (selected) {
       const res = await fetch(`/api/plots/cell?x=${selected.gridX}&y=${selected.gridY}`);
-      setCell(await res.json());
+      const data = await readJson<CellInfo>(res);
+      if (data) setCell(data);
     }
     router.refresh();
   }
@@ -131,11 +140,12 @@ export function MapExplorer({
         name: name || undefined,
         linkUrl: linkUrl || undefined,
         message: message || undefined,
+        logoUrl: logoUrl || undefined,
       }),
     });
-    const data = await res.json();
+    const data = await readJson(res);
     setBusy(false);
-    if (!res.ok) return setError(data.error ?? "Purchase failed.");
+    if (!res.ok) return setError(errorMessage(data, "Purchase failed."));
     await refreshAfterChange();
   }
 
@@ -144,9 +154,9 @@ export function MapExplorer({
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/plots/${cell.id}/buy-resale`, { method: "POST" });
-    const data = await res.json();
+    const data = await readJson(res);
     setBusy(false);
-    if (!res.ok) return setError(data.error ?? "Purchase failed.");
+    if (!res.ok) return setError(errorMessage(data, "Purchase failed."));
     await refreshAfterChange();
   }
 
@@ -161,9 +171,9 @@ export function MapExplorer({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ price }),
     });
-    const data = await res.json();
+    const data = await readJson(res);
     setBusy(false);
-    if (!res.ok) return setError(data.error ?? "Could not list plot.");
+    if (!res.ok) return setError(errorMessage(data, "Could not list plot."));
     await refreshAfterChange();
   }
 
@@ -171,8 +181,10 @@ export function MapExplorer({
     if (!cell?.id) return;
     setBusy(true);
     const res = await fetch(`/api/plots/${cell.id}/unlist`, { method: "POST" });
+    const data = await readJson(res);
     setBusy(false);
-    if (res.ok) await refreshAfterChange();
+    if (!res.ok) return setError(errorMessage(data, "Could not remove listing."));
+    await refreshAfterChange();
   }
 
   async function saveProfile() {
@@ -186,10 +198,13 @@ export function MapExplorer({
         name: name || null,
         linkUrl: linkUrl || null,
         message: message || null,
+        logoUrl: logoUrl || null,
       }),
     });
+    const data = await readJson(res);
     setBusy(false);
-    if (res.ok) await refreshAfterChange();
+    if (!res.ok) return setError(errorMessage(data, "Could not save profile."));
+    await refreshAfterChange();
   }
 
   useEffect(() => {
@@ -321,6 +336,12 @@ export function MapExplorer({
                       value={linkUrl}
                       onChange={(e) => setLinkUrl(e.target.value)}
                     />
+                    <input
+                      className="input mb-2"
+                      placeholder="Logo/image URL (optional)"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                    />
                     <textarea
                       className="input mb-3"
                       placeholder="Public message (optional)"
@@ -423,6 +444,12 @@ export function MapExplorer({
                       placeholder="Website or social link"
                       value={linkUrl}
                       onChange={(e) => setLinkUrl(e.target.value)}
+                    />
+                    <input
+                      className="input"
+                      placeholder="Logo/image URL"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
                     />
                     <textarea
                       className="input"

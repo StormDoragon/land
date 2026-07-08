@@ -108,9 +108,9 @@ function GridOverlay({ bounds, zoom }: { bounds: CellBounds | null; zoom: number
           key={`g-${c.gridX}-${c.gridY}`}
           bounds={rectFor(c.gridX, c.gridY)}
           pathOptions={{
-            color: "#3a4b7a",
+            color: "#475569",
             weight: 0.5,
-            opacity: 0.25,
+            opacity: 0.35,
             fill: false,
             interactive: false,
           }}
@@ -148,8 +148,8 @@ export default function WorldMap({
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         subdomains="abcd"
       />
 
@@ -168,10 +168,10 @@ export default function WorldMap({
             },
           }}
           pathOptions={{
-            color: p.forSalePrice != null ? "#f5c451" : p.color,
-            weight: p.forSalePrice != null ? 2 : 1,
+            color: p.forSalePrice != null ? "#f59e0b" : p.color,
+            weight: p.forSalePrice != null ? 2.5 : 1.5,
             fillColor: p.color,
-            fillOpacity: 0.55,
+            fillOpacity: 0.65,
           }}
         />
       ))}
@@ -180,11 +180,11 @@ export default function WorldMap({
         <Rectangle
           bounds={rectFor(selected.gridX, selected.gridY)}
           pathOptions={{
-            color: "#ffffff",
-            weight: 2,
-            dashArray: "4 3",
-            fillColor: "#6ea8ff",
-            fillOpacity: 0.25,
+            color: "#4338ca",
+            weight: 3,
+            dashArray: "6 4",
+            fillColor: "#6366f1",
+            fillOpacity: 0.3,
           }}
         />
       )}

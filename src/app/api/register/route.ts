@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/lib/security";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { createSession, hashPassword } from "@/lib/auth";
@@ -10,6 +11,9 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!(await isSameOriginRequest())) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -18,7 +22,8 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { email, displayName, password } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
+  const { displayName, password } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {

@@ -5,9 +5,17 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
 const COOKIE_NAME = "otw_session";
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "dev-secret-change-me",
-);
+function getAuthSecret(): Uint8Array {
+  const value = process.env.AUTH_SECRET;
+  if (!value && process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET must be set in production.");
+  }
+  return new TextEncoder().encode(value ?? "dev-secret-change-me");
+}
+
+function getAuthSecretValue(): Uint8Array {
+  return getAuthSecret();
+}
 
 export interface SessionPayload {
   userId: string;
@@ -31,7 +39,7 @@ async function signSession(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
-    .sign(secret);
+    .sign(getAuthSecretValue());
 }
 
 /** Create the session cookie for a user (call from a route handler / action). */
@@ -58,7 +66,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getAuthSecretValue());
     return {
       userId: payload.userId as string,
       email: payload.email as string,

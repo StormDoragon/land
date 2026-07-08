@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cellFromIndices, TIERS } from "@/lib/grid";
+import { cellFromIndices, isValidGridCell, TIERS } from "@/lib/grid";
 import { getSession } from "@/lib/auth";
 
 // GET /api/plots/cell?x=&y=
@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const gridX = Number(searchParams.get("x"));
   const gridY = Number(searchParams.get("y"));
-  if (Number.isNaN(gridX) || Number.isNaN(gridY)) {
+  if (!isValidGridCell(gridX, gridY)) {
     return NextResponse.json({ error: "Invalid cell" }, { status: 400 });
   }
 

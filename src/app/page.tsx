@@ -10,9 +10,13 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const session = await getSession();
 
-  const [plotCount, countries, featured] = await Promise.all([
+  const [plotCount, locations, featured] = await Promise.all([
     prisma.plot.count(),
-    prisma.plot.findMany({ distinct: ["locationLabel"], select: { locationLabel: true } }),
+    prisma.plot.findMany({
+      where: { locationLabel: { not: null } },
+      distinct: ["locationLabel"],
+      select: { locationLabel: true },
+    }),
     prisma.plot.findMany({
       orderBy: [{ purchasePrice: "desc" }, { purchasedAt: "desc" }],
       take: 4,
@@ -47,7 +51,7 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-4 gap-3 mt-8">
             <Stat value={`${plotCount}`} label="Plots claimed" />
-            <Stat value={`${countries.length}`} label="Locations" />
+            <Stat value={`${locations.length}`} label="Locations" />
             <Stat value={`$${TIERS.BASIC.price}`} label="Starting price" />
             <Stat value="10%" label="Marketplace fee" />
           </div>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/lib/security";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
@@ -7,6 +8,9 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!(await isSameOriginRequest())) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
 

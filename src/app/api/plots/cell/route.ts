@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cellFromIndices, BASE_PRICE } from "@/lib/grid";
+import { cellFromIndices, TIERS } from "@/lib/grid";
 import { getSession } from "@/lib/auth";
 
 // GET /api/plots/cell?x=&y=
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
       gridY,
       centerLat: cell.centerLat,
       centerLng: cell.centerLng,
-      price: BASE_PRICE,
+      price: TIERS.BASIC.price,
     });
   }
 
@@ -46,6 +46,10 @@ export async function GET(req: Request) {
     name: plot.name,
     color: plot.color,
     locationLabel: plot.locationLabel,
+    tier: plot.tier,
+    linkUrl: plot.linkUrl,
+    message: plot.message,
+    logoUrl: plot.logoUrl,
     owner: plot.owner,
     isMine: session?.userId === plot.ownerId,
     forSale: !!listing,

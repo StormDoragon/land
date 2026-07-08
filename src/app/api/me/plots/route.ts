@@ -22,6 +22,7 @@ export async function GET() {
       centerLng: p.centerLng,
       name: p.name,
       color: p.color,
+      tier: p.tier,
       locationLabel: p.locationLabel,
       purchasePrice: p.purchasePrice,
       purchasedAt: p.purchasedAt,

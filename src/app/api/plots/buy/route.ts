@@ -3,20 +3,20 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { cellFromIndices, BASE_PRICE } from "@/lib/grid";
+import { cellFromIndices, TIERS } from "@/lib/grid";
 import { reverseGeocode } from "@/lib/geocode";
 
 const schema = z.object({
   gridX: z.number().int(),
   gridY: z.number().int(),
+  tier: z.enum(["BASIC", "CITY", "PREMIUM", "FOUNDER", "HOMEPAGE"]).default("BASIC"),
   name: z.string().max(60).optional(),
-  color: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/)
-    .optional(),
+  linkUrl: z.string().url().max(300).optional().or(z.literal("")),
+  message: z.string().max(280).optional(),
+  logoUrl: z.string().url().max(300).optional().or(z.literal("")),
 });
 
-// POST /api/plots/buy — primary purchase of a fresh cell at BASE_PRICE (mock checkout).
+// POST /api/plots/buy — primary purchase of a fresh cell at the tier's price (mock checkout).
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) {
@@ -27,8 +27,9 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { gridX, gridY, name, color } = parsed.data;
+  const { gridX, gridY, tier, name, linkUrl, message, logoUrl } = parsed.data;
   const cell = cellFromIndices(gridX, gridY);
+  const tierInfo = TIERS[tier];
 
   const label = await reverseGeocode(cell.centerLat, cell.centerLng);
 
@@ -41,9 +42,13 @@ export async function POST(req: Request) {
           centerLat: cell.centerLat,
           centerLng: cell.centerLng,
           name: name || null,
-          color: color || "#22c55e",
+          color: tierInfo.color,
           locationLabel: label,
-          purchasePrice: BASE_PRICE,
+          tier,
+          linkUrl: linkUrl || null,
+          message: message || null,
+          logoUrl: logoUrl || null,
+          purchasePrice: tierInfo.price,
           ownerId: session.userId,
         },
       });
@@ -51,14 +56,14 @@ export async function POST(req: Request) {
         data: {
           plotId: created.id,
           buyerId: session.userId,
-          amount: BASE_PRICE,
+          amount: tierInfo.price,
           type: "PRIMARY",
         },
       });
       return created;
     });
 
-    return NextResponse.json({ id: plot.id, price: BASE_PRICE });
+    return NextResponse.json({ id: plot.id, price: tierInfo.price, tier });
   } catch (e) {
     // Unique constraint on (gridX, gridY) => the cell was already claimed.
     if (

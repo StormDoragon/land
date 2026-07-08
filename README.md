@@ -1,13 +1,29 @@
-# 🌍 Own the World — Virtual Land Marketplace
+# 🌐 APlotInWeb — Own a Visible Piece of the Internet
 
-Buy virtual plots of land tied to **real-world locations**. Open the map, zoom
-into any city, click a plot, and claim it — plots start at **$5**. Name it, paint
-its flag, get a shareable **deed certificate**, and later **resell** it to anyone
-for any price.
+Buy your **digital plot** on a real-world map. Open the map, zoom into any city,
+click a plot, and claim it — plots start at **$5**. Add your name, logo, link and
+public message, get a shareable **digital ownership certificate**, and later
+**resell** your verified digital asset for any price.
 
 > Payments run in **demo mode**: the full buy/resale flow works and every purchase
 > is persisted, but no real money moves. The order/ledger model is structured so
 > real Stripe Checkout can be dropped in later without changing ownership logic.
+> "Blockchain / NFT proof" is a labelled **Phase 2** roadmap item — not implied to
+> exist today.
+
+## Plot tiers
+
+| Tier | Price | Highlights |
+| --- | --- | --- |
+| Basic | $5 | Public name + owner page, resell anytime |
+| City | $15 | City placement, owner card, public message |
+| Premium | $49 | Logo display, featured owner, premium map color |
+| Founder | $99 | Founder badge, priority visibility |
+| Homepage | $199 | Homepage visibility, marketplace priority |
+
+Every plot carries a public **owner profile** (name, link, message, optional logo)
+shown on the map and on its public owner page. Owners can **upgrade** to a higher
+tier at any time.
 
 ## How it works
 
@@ -61,7 +77,7 @@ npm run db:seed             # demo user + landmark plots
 The seed creates a demo account:
 
 ```
-demo@owntheworld.dev / password123
+demo@aplotinweb.com / password123
 ```
 
 …which owns a handful of famous landmark plots (Eiffel Tower, Times Square, etc.)
@@ -78,28 +94,31 @@ npm run dev
 
 - 🗺️ **Interactive world map** — pan/zoom anywhere; sold plots render as colored
   territories, a faint grid appears when you zoom in.
-- 💵 **Claim from $5** — click any free cell, name it, pick a flag color, buy.
+- 💵 **Tiered claiming from $5** — click any free cell, pick a tier, add name/link/
+  message, buy. Upgrade to a higher tier anytime.
 - 🏷️ **Resell for any price** — list plots on the marketplace; ownership transfers
   atomically with a recorded transaction.
-- 📜 **Deed certificates** — every plot has a shareable certificate page with full
-  ownership history.
-- 🏆 **Leaderboard & live activity** — biggest landowners and a recently-sold feed.
+- 📜 **Owner pages & certificates** — every plot has a public owner page with logo,
+  link, message, tier badge, a digital ownership certificate and full history.
+- 🏆 **Leaderboard & live activity** — biggest owners and a recently-sold feed.
 - 🔒 **Accounts** — register/login, plots owned under your account.
 
 ## Project layout
 
 ```
-prisma/schema.prisma        # User / Plot / Listing / Transaction
+prisma/schema.prisma        # User / Plot (tier + profile) / Listing / Transaction
 prisma/seed.ts              # demo data
-src/lib/grid.ts             # grid math, snapping, pricing (BASE_PRICE)
+src/lib/grid.ts             # grid math, snapping, TIERS pricing config
 src/lib/auth.ts             # JWT session + password hashing
 src/lib/prisma.ts           # Prisma client singleton
 src/lib/geocode.ts          # Nominatim reverse geocoding
 src/app/api/...             # route handlers (plots, buy, resale, marketplace, ...)
 src/components/WorldMap.tsx # Leaflet map (client)
-src/components/MapExplorer.tsx  # map + slide-in plot panel + buy flow
-src/app/page.tsx            # home (map)
-src/app/{dashboard,marketplace,leaderboard,plot/[id]}  # pages
+src/components/MapExplorer.tsx  # map + slide-in tier buy/profile panel
+src/components/PricingGrid.tsx  # shared tier cards
+src/app/page.tsx            # landing (hero + map + how-it-works + pricing + owners)
+src/app/map                 # full-screen interactive map
+src/app/{pricing,faq,owners,dashboard,marketplace,leaderboard,plot/[id]}
 ```
 
 ## Future work

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { TIERS, tierRank } from "@/lib/grid";
 
 // GET /api/plots/[id] — full public detail for a plot (deed page).
 export async function GET(
@@ -39,9 +40,13 @@ const patchSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
+  linkUrl: z.string().url().max(300).nullable().optional().or(z.literal("")),
+  message: z.string().max(280).nullable().optional().or(z.literal("")),
+  logoUrl: z.string().url().max(300).nullable().optional().or(z.literal("")),
+  tier: z.enum(["BASIC", "CITY", "PREMIUM", "FOUNDER", "HOMEPAGE"]).optional(),
 });
 
-// PATCH /api/plots/[id] — owner renames / recolors their plot.
+// PATCH /api/plots/[id] — owner edits their plot's profile, or upgrades its tier.
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -54,6 +59,7 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
+  const d = parsed.data;
 
   const plot = await prisma.plot.findUnique({ where: { id } });
   if (!plot) return NextResponse.json({ error: "Plot not found." }, { status: 404 });
@@ -61,12 +67,39 @@ export async function PATCH(
     return NextResponse.json({ error: "You don't own this plot." }, { status: 403 });
   }
 
+  // A tier change is an upgrade only (never downgrade); it charges the difference
+  // and recolors the plot to the new tier.
+  let tierData = {};
+  if (d.tier && d.tier !== plot.tier) {
+    if (tierRank(d.tier) < tierRank(plot.tier)) {
+      return NextResponse.json(
+        { error: "You can only upgrade to a higher tier." },
+        { status: 400 },
+      );
+    }
+    const newInfo = TIERS[d.tier];
+    const diff = Math.max(0, newInfo.price - plot.purchasePrice);
+    tierData = { tier: d.tier, color: newInfo.color, purchasePrice: newInfo.price };
+    await prisma.transaction.create({
+      data: { plotId: id, buyerId: session.userId, amount: diff, type: "PRIMARY" },
+    });
+  }
+
   const updated = await prisma.plot.update({
     where: { id },
     data: {
-      ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
-      ...(parsed.data.color !== undefined ? { color: parsed.data.color } : {}),
+      ...(d.name !== undefined ? { name: d.name } : {}),
+      ...(d.color !== undefined ? { color: d.color } : {}),
+      ...(d.linkUrl !== undefined ? { linkUrl: d.linkUrl || null } : {}),
+      ...(d.message !== undefined ? { message: d.message || null } : {}),
+      ...(d.logoUrl !== undefined ? { logoUrl: d.logoUrl || null } : {}),
+      ...tierData,
     },
   });
-  return NextResponse.json({ id: updated.id, name: updated.name, color: updated.color });
+  return NextResponse.json({
+    id: updated.id,
+    name: updated.name,
+    color: updated.color,
+    tier: updated.tier,
+  });
 }

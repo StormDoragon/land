@@ -4,9 +4,9 @@ import { Header } from "@/components/Header";
 import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Own the World — Virtual Land Marketplace",
+  title: "APlotInWeb — Own a Visible Piece of the Internet",
   description:
-    "Buy virtual plots of land anywhere on the real-world map. Claim a city corner from $5, name it, and resell it.",
+    "Buy your digital plot on the real-world map. Claim a spot from $5, add your name, logo and link, and resell your verified digital asset.",
 };
 
 export default async function RootLayout({

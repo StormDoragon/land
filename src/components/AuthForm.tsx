@@ -36,13 +36,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     <div className="flex-1 grid place-items-center px-4 py-12">
       <div className="card p-7 w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="text-3xl mb-2">🌍</div>
+          <div className="text-3xl mb-2 grad font-extrabold">APlotInWeb</div>
           <h1 className="text-xl font-bold">
             {isRegister ? "Create your account" : "Welcome back"}
           </h1>
           <p className="text-sm text-[var(--muted)] mt-1">
             {isRegister
-              ? "Start building your global land empire."
+              ? "Claim your visible piece of the internet."
               : "Sign in to manage your plots."}
           </p>
         </div>
@@ -113,7 +113,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
         {!isRegister && (
           <div className="text-center text-xs text-[var(--muted)] mt-4 border-t border-[var(--border)] pt-4">
-            Demo account: <span className="font-mono">demo@owntheworld.dev</span> /{" "}
+            Demo account: <span className="font-mono">demo@aplotinweb.com</span> /{" "}
             <span className="font-mono">password123</span>
           </div>
         )}

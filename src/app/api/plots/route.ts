@@ -28,6 +28,7 @@ export async function GET(req: Request) {
       centerLng: true,
       name: true,
       color: true,
+      tier: true,
       locationLabel: true,
       owner: { select: { displayName: true } },
       listings: {
@@ -47,6 +48,7 @@ export async function GET(req: Request) {
       centerLng: p.centerLng,
       name: p.name,
       color: p.color,
+      tier: p.tier,
       locationLabel: p.locationLabel,
       ownerName: p.owner.displayName,
       forSalePrice: p.listings[0]?.price ?? null,

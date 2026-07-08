@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SoldPlot, SelectedCell } from "./WorldMap";
-import type { CellBounds } from "@/lib/grid";
-import { formatCoords } from "@/lib/grid";
+import type { CellBounds, PlotTier } from "@/lib/grid";
+import { formatCoords, TIERS, TIER_ORDER } from "@/lib/grid";
 
 const WorldMap = dynamic(() => import("./WorldMap"), {
   ssr: false,
@@ -27,6 +27,10 @@ interface CellInfo {
   price?: number;
   name?: string | null;
   color?: string;
+  tier?: PlotTier;
+  linkUrl?: string | null;
+  message?: string | null;
+  logoUrl?: string | null;
   locationLabel?: string | null;
   owner?: { id: string; displayName: string };
   isMine?: boolean;
@@ -35,9 +39,13 @@ interface CellInfo {
   forSalePrice?: number | null;
 }
 
-const SWATCHES = ["#22c55e", "#f5c451", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
-
-export function MapExplorer({ user }: { user: { displayName: string } | null }) {
+export function MapExplorer({
+  user,
+  variant = "full",
+}: {
+  user: { displayName: string } | null;
+  variant?: "full" | "embed";
+}) {
   const router = useRouter();
   const [plots, setPlots] = useState<SoldPlot[]>([]);
   const [selected, setSelected] = useState<SelectedCell | null>(null);
@@ -48,8 +56,10 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [tier, setTier] = useState<PlotTier>("BASIC");
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#22c55e");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [message, setMessage] = useState("");
   const [listPrice, setListPrice] = useState("");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,15 +91,21 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
     setSelected(c);
     setCell(null);
     setError(null);
+    setTier("BASIC");
     setName("");
-    setColor("#22c55e");
+    setLinkUrl("");
+    setMessage("");
     setListPrice("");
     setLoadingCell(true);
     const res = await fetch(`/api/plots/cell?x=${c.gridX}&y=${c.gridY}`);
     const data = await res.json();
     setLoadingCell(false);
     setCell(data);
-    if (data.color) setColor(data.color);
+    if (data.status === "owned") {
+      setName(data.name ?? "");
+      setLinkUrl(data.linkUrl ?? "");
+      setMessage(data.message ?? "");
+    }
   }, []);
 
   async function refreshAfterChange() {
@@ -111,8 +127,10 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
       body: JSON.stringify({
         gridX: cell.gridX,
         gridY: cell.gridY,
+        tier,
         name: name || undefined,
-        color,
+        linkUrl: linkUrl || undefined,
+        message: message || undefined,
       }),
     });
     const data = await res.json();
@@ -157,13 +175,18 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
     if (res.ok) await refreshAfterChange();
   }
 
-  async function saveAppearance() {
+  async function saveProfile() {
     if (!cell?.id) return;
     setBusy(true);
+    setError(null);
     const res = await fetch(`/api/plots/${cell.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name || null, color }),
+      body: JSON.stringify({
+        name: name || null,
+        linkUrl: linkUrl || null,
+        message: message || null,
+      }),
     });
     setBusy(false);
     if (res.ok) await refreshAfterChange();
@@ -175,8 +198,13 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
     };
   }, []);
 
+  const rootClass =
+    variant === "full"
+      ? "relative w-full h-[calc(100vh-3.5rem)]"
+      : "relative w-full h-full";
+
   return (
-    <div className="relative w-full h-[calc(100vh-3.5rem)]">
+    <div className={rootClass}>
       <WorldMap
         plots={plots}
         selected={selected}
@@ -190,11 +218,13 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
       {!selected && (
         <div className="pointer-events-none absolute left-4 bottom-6 z-[500] max-w-sm">
           <div className="card p-4 pointer-events-auto">
-            <div className="text-sm font-semibold mb-1">Own a piece of the real world 🌍</div>
+            <div className="text-sm font-semibold mb-1">
+              Own a visible piece of the internet 🌐
+            </div>
             <p className="text-[13px] text-[var(--muted)] leading-relaxed">
               Zoom into any city and click a plot to claim it. Plots start at{" "}
-              <span className="text-[var(--gold)] font-semibold">$5</span>. Own it, name it,
-              paint it — then resell it for whatever you like.
+              <span className="text-[var(--cyan)] font-semibold">$5</span>. Add your name,
+              link and message — then resell your verified digital asset.
             </p>
           </div>
         </div>
@@ -210,16 +240,14 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
       {/* Slide-in plot panel */}
       {selected && (
         <div className="absolute top-4 right-4 z-[600] w-[340px] max-w-[calc(100vw-2rem)] slidein">
-          <div className="card p-5">
+          <div className="card p-5 max-h-[calc(100%-2rem)] overflow-y-auto">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
                 <div className="text-xs uppercase tracking-wide text-[var(--muted)]">
                   Plot #{selected.gridX}, {selected.gridY}
                 </div>
                 <div className="text-sm font-mono text-[var(--muted)] mt-0.5">
-                  {cell
-                    ? formatCoords(cell.centerLat, cell.centerLng)
-                    : "…"}
+                  {cell ? formatCoords(cell.centerLat, cell.centerLng) : "…"}
                 </div>
               </div>
               <button
@@ -235,52 +263,79 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
             </div>
 
             {loadingCell && (
-              <div className="text-sm text-[var(--muted)] py-6 text-center">Checking the registry…</div>
+              <div className="text-sm text-[var(--muted)] py-6 text-center">
+                Checking the registry…
+              </div>
             )}
 
-            {cell?.locationLabel && (
-              <div className="pill mb-3">📍 {cell.locationLabel}</div>
-            )}
+            {cell?.locationLabel && <div className="pill mb-3">📍 {cell.locationLabel}</div>}
 
             {/* AVAILABLE */}
             {cell?.status === "available" && (
               <>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-bold text-[var(--gold)]">${cell.price}</span>
-                  <span className="text-sm text-[var(--muted)]">to claim</span>
+                <label className="block text-xs text-[var(--muted)] mb-1">Choose a tier</label>
+                <div className="space-y-2 mb-4">
+                  {TIER_ORDER.map((t) => {
+                    const info = TIERS[t];
+                    const active = tier === t;
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setTier(t)}
+                        className="w-full text-left rounded-xl border p-2.5 flex items-center gap-3 transition-colors"
+                        style={{
+                          borderColor: active ? info.color : "var(--border)",
+                          background: active ? "rgba(103,232,249,0.08)" : "transparent",
+                        }}
+                      >
+                        <span
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ background: info.color }}
+                        />
+                        <span className="flex-1">
+                          <span className="block text-sm font-semibold">{info.label}</span>
+                          <span className="block text-[11px] text-[var(--muted)]">
+                            {info.blurb}
+                          </span>
+                        </span>
+                        <span className="font-bold" style={{ color: info.color }}>
+                          ${info.price}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
+
                 {user ? (
                   <>
-                    <label className="block text-xs text-[var(--muted)] mb-1">Name your plot (optional)</label>
                     <input
-                      className="input mb-3"
-                      placeholder="e.g. My Corner of Paris"
+                      className="input mb-2"
+                      placeholder="Your name or business"
                       value={name}
                       maxLength={60}
                       onChange={(e) => setName(e.target.value)}
                     />
-                    <label className="block text-xs text-[var(--muted)] mb-1">Flag color</label>
-                    <div className="flex gap-2 mb-4">
-                      {SWATCHES.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setColor(s)}
-                          className="w-7 h-7 rounded-full border-2"
-                          style={{
-                            background: s,
-                            borderColor: color === s ? "#fff" : "transparent",
-                          }}
-                          aria-label={`Color ${s}`}
-                        />
-                      ))}
-                    </div>
-                    <button onClick={buy} disabled={busy} className="btn btn-gold w-full">
-                      {busy ? "Claiming…" : `Claim this plot · $${cell.price}`}
+                    <input
+                      className="input mb-2"
+                      placeholder="Website or social link (optional)"
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                    />
+                    <textarea
+                      className="input mb-3"
+                      placeholder="Public message (optional)"
+                      rows={2}
+                      value={message}
+                      maxLength={280}
+                      onChange={(e) => setMessage(e.target.value)}
+                    />
+                    <button onClick={buy} disabled={busy} className="btn btn-primary w-full">
+                      {busy ? "Claiming…" : `Claim ${TIERS[tier].label} · $${TIERS[tier].price}`}
                     </button>
                   </>
                 ) : (
-                  <Link href="/login" className="btn btn-gold w-full">
-                    Log in to claim · ${cell.price}
+                  <Link href="/login" className="btn btn-primary w-full">
+                    Log in to claim · from $5
                   </Link>
                 )}
               </>
@@ -289,19 +344,51 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
             {/* OWNED */}
             {cell?.status === "owned" && (
               <>
-                <div className="mb-3">
-                  <div className="text-lg font-semibold">
-                    {cell.name || "Unnamed plot"}
-                  </div>
-                  <div className="text-sm text-[var(--muted)]">
-                    Owned by {cell.isMine ? "you" : cell.owner?.displayName}
+                <div className="mb-3 flex items-center gap-3">
+                  {cell.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={cell.logoUrl}
+                      alt=""
+                      className="w-10 h-10 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="w-10 h-10 rounded-lg grid place-items-center font-bold text-[#041018]"
+                      style={{ background: cell.color }}
+                    >
+                      {(cell.name || cell.owner?.displayName || "?")[0]}
+                    </span>
+                  )}
+                  <div>
+                    <div className="text-base font-semibold leading-tight">
+                      {cell.name || "Unnamed plot"}
+                    </div>
+                    <div className="text-xs text-[var(--muted)]">
+                      {cell.tier ? TIERS[cell.tier].label : "Basic"} · owned by{" "}
+                      {cell.isMine ? "you" : cell.owner?.displayName}
+                    </div>
                   </div>
                 </div>
+
+                {cell.message && (
+                  <p className="text-sm text-[var(--muted)] italic mb-3">“{cell.message}”</p>
+                )}
+                {cell.linkUrl && (
+                  <a
+                    href={cell.linkUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-sm text-[var(--cyan)] hover:underline break-all block mb-3"
+                  >
+                    🔗 {cell.linkUrl}
+                  </a>
+                )}
 
                 {cell.forSale && !cell.isMine && (
                   <>
                     <div className="flex items-baseline gap-2 mb-4">
-                      <span className="text-3xl font-bold text-[var(--emerald)]">
+                      <span className="text-3xl font-bold text-[var(--green)]">
                         ${cell.forSalePrice}
                       </span>
                       <span className="text-sm text-[var(--muted)]">resale price</span>
@@ -324,27 +411,29 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
 
                 {cell.isMine && (
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs text-[var(--muted)] mb-1">Rename</label>
-                      <input
-                        className="input"
-                        value={name || cell.name || ""}
-                        maxLength={60}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      {SWATCHES.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setColor(s)}
-                          className="w-7 h-7 rounded-full border-2"
-                          style={{ background: s, borderColor: color === s ? "#fff" : "transparent" }}
-                        />
-                      ))}
-                    </div>
-                    <button onClick={saveAppearance} disabled={busy} className="btn btn-ghost w-full">
-                      Save changes
+                    <input
+                      className="input"
+                      placeholder="Plot name"
+                      value={name}
+                      maxLength={60}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                    <input
+                      className="input"
+                      placeholder="Website or social link"
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                    />
+                    <textarea
+                      className="input"
+                      placeholder="Public message"
+                      rows={2}
+                      value={message}
+                      maxLength={280}
+                      onChange={(e) => setMessage(e.target.value)}
+                    />
+                    <button onClick={saveProfile} disabled={busy} className="btn btn-outline w-full">
+                      Save profile
                     </button>
 
                     <hr className="border-[var(--border)]" />
@@ -366,7 +455,11 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
                           value={listPrice}
                           onChange={(e) => setListPrice(e.target.value)}
                         />
-                        <button onClick={listForSale} disabled={busy} className="btn btn-emerald whitespace-nowrap">
+                        <button
+                          onClick={listForSale}
+                          disabled={busy}
+                          className="btn btn-emerald whitespace-nowrap"
+                        >
                           List
                         </button>
                       </div>
@@ -377,9 +470,9 @@ export function MapExplorer({ user }: { user: { displayName: string } | null }) 
                 {cell.id && (
                   <Link
                     href={`/plot/${cell.id}`}
-                    className="block text-center text-sm text-[var(--accent)] mt-4 hover:underline"
+                    className="block text-center text-sm text-[var(--cyan)] mt-4 hover:underline"
                   >
-                    View deed certificate →
+                    View owner page & certificate →
                   </Link>
                 )}
               </>

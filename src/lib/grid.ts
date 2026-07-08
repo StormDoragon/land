@@ -6,7 +6,84 @@
 // computed on the fly, so we never enumerate the billions of possible cells.
 
 export const CELL_SIZE = 0.001; // ~111m x ~111m near the equator — one "plot"
-export const BASE_PRICE = 5; // USD — starting price for a fresh plot
+
+// Ownership tiers. A fresh plot starts at BASIC ($5); higher tiers unlock richer
+// visibility. `color` drives how the plot renders on the map.
+export type PlotTier = "BASIC" | "CITY" | "PREMIUM" | "FOUNDER" | "HOMEPAGE";
+
+export interface TierInfo {
+  id: PlotTier;
+  label: string;
+  price: number;
+  color: string;
+  blurb: string;
+  perks: string[];
+}
+
+export const TIERS: Record<PlotTier, TierInfo> = {
+  BASIC: {
+    id: "BASIC",
+    label: "Basic Plot",
+    price: 5,
+    color: "#67e8f9",
+    blurb: "Your name on the public world map.",
+    perks: ["Public name + country listing", "Shareable owner page", "Resell anytime"],
+  },
+  CITY: {
+    id: "CITY",
+    label: "City Plot",
+    price: 15,
+    color: "#34d399",
+    blurb: "City placement with an owner card.",
+    perks: ["City placement", "Owner card + social link", "Public message"],
+  },
+  PREMIUM: {
+    id: "PREMIUM",
+    label: "Premium Plot",
+    price: 49,
+    color: "#a78bfa",
+    blurb: "Stand out with a logo and featured color.",
+    perks: ["Logo / photo display", "Featured owner", "Premium map color"],
+  },
+  FOUNDER: {
+    id: "FOUNDER",
+    label: "Founder Plot",
+    price: 99,
+    color: "#f5c451",
+    blurb: "Early-founder badge and priority visibility.",
+    perks: ["Founder badge", "Priority visibility", "All Premium perks"],
+  },
+  HOMEPAGE: {
+    id: "HOMEPAGE",
+    label: "Homepage Asset",
+    price: 199,
+    color: "#f472b6",
+    blurb: "Top-tier homepage & marketplace priority.",
+    perks: ["Homepage visibility", "Marketplace priority", "All Founder perks"],
+  },
+};
+
+export const TIER_ORDER: PlotTier[] = ["BASIC", "CITY", "PREMIUM", "FOUNDER", "HOMEPAGE"];
+
+/** Lowest tier / default price for a fresh plot. */
+export const BASE_PRICE = TIERS.BASIC.price;
+
+export function isPlotTier(v: unknown): v is PlotTier {
+  return typeof v === "string" && v in TIERS;
+}
+
+export function priceForTier(tier: PlotTier): number {
+  return TIERS[tier].price;
+}
+
+export function tierColor(tier: PlotTier): string {
+  return TIERS[tier].color;
+}
+
+/** Rank of a tier in the upgrade ladder (higher = more premium). */
+export function tierRank(tier: PlotTier): number {
+  return TIER_ORDER.indexOf(tier);
+}
 
 export interface CellBounds {
   south: number;

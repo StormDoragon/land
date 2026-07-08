@@ -22,6 +22,14 @@ model User {
   soldTx           Transaction[] @relation("SellerTx")
 }
 
+enum PlotTier {
+  BASIC
+  CITY
+  PREMIUM
+  FOUNDER
+  HOMEPAGE
+}
+
 model Plot {
   id            String   @id @default(cuid())
   gridX         Int
@@ -29,8 +37,12 @@ model Plot {
   centerLat     Float
   centerLng     Float
   name          String?
-  color         String   @default("#22c55e")
+  color         String   @default("#67e8f9")
   locationLabel String?
+  tier          PlotTier @default(BASIC)
+  linkUrl       String?
+  message       String?
+  logoUrl       String?
   purchasePrice Float
   purchasedAt   DateTime @default(now())
 

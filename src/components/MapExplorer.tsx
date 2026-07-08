@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { SoldPlot, SelectedCell } from "./WorldMap";
+import type { SoldPlot, SelectedCell, FlyTarget } from "./WorldMap";
 import type { CellBounds, PlotTier } from "@/lib/grid";
-import { formatCoords, TIERS, TIER_ORDER } from "@/lib/grid";
+import { formatCoords, latToGridY, lngToGridX, TIERS, TIER_ORDER } from "@/lib/grid";
 import { errorMessage, readJson } from "@/lib/api-client";
+import { AddressSearch } from "./AddressSearch";
 
 const WorldMap = dynamic(() => import("./WorldMap"), {
   ssr: false,
@@ -53,6 +54,7 @@ export function MapExplorer({
   const [cell, setCell] = useState<CellInfo | null>(null);
   const [bounds, setBounds] = useState<CellBounds | null>(null);
   const [zoom, setZoom] = useState(3);
+  const [flyTo, setFlyTo] = useState<FlyTarget | null>(null);
   const [loadingCell, setLoadingCell] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +117,18 @@ export function MapExplorer({
       setLogoUrl(data.logoUrl ?? "");
     }
   }, []);
+
+  const onSearchPick = useCallback(
+    (result: { lat: number; lng: number; label: string }) => {
+      setFlyTo({ lat: result.lat, lng: result.lng, zoom: 17, nonce: Date.now() });
+      // Snap to and open the plot at the searched location so users can claim it.
+      selectCell({
+        gridX: lngToGridX(result.lng),
+        gridY: latToGridY(result.lat),
+      });
+    },
+    [selectCell],
+  );
 
   async function refreshAfterChange() {
     if (bounds) await loadPlots(bounds);
@@ -225,9 +239,15 @@ export function MapExplorer({
         selected={selected}
         currentBounds={bounds}
         currentZoom={zoom}
+        flyTo={flyTo}
         onSelect={selectCell}
         onBoundsChange={onBoundsChange}
       />
+
+      {/* Address search — fly to any real-world place to view & claim its plots */}
+      <div className="absolute top-4 left-4 z-[600] w-[340px] max-w-[calc(100vw-2rem)]">
+        <AddressSearch onPick={onSearchPick} />
+      </div>
 
       {/* Floating intro card when nothing is selected */}
       {!selected && (

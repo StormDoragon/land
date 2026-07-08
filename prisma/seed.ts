@@ -1,9 +1,11 @@
-import { PrismaClient, PlotTier } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 const CELL_SIZE = 0.001;
+
+type PlotTier = "BASIC" | "CITY" | "PREMIUM" | "FOUNDER" | "HOMEPAGE";
 
 const TIER_PRICE: Record<PlotTier, number> = {
   BASIC: 5,

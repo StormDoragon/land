@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
   Rectangle,
+  useMap,
   useMapEvents,
 } from "react-leaflet";
 import type { LatLngBoundsExpression } from "leaflet";
@@ -32,6 +33,14 @@ export interface SoldPlot {
 export interface SelectedCell {
   gridX: number;
   gridY: number;
+}
+
+/** A location the map should fly to. `nonce` forces a re-fly to the same spot. */
+export interface FlyTarget {
+  lat: number;
+  lng: number;
+  zoom?: number;
+  nonce: number;
 }
 
 function rectFor(gridX: number, gridY: number): LatLngBoundsExpression {
@@ -74,6 +83,16 @@ function MapEvents({
   return null;
 }
 
+/** Flies the map to a search result whenever a new target arrives. */
+function FlyController({ target }: { target: FlyTarget | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!target) return;
+    map.flyTo([target.lat, target.lng], target.zoom ?? 16, { duration: 1.2 });
+  }, [map, target]);
+  return null;
+}
+
 /** Faint grid overlay, only drawn when zoomed in enough to pick individual plots. */
 function GridOverlay({ bounds, zoom }: { bounds: CellBounds | null; zoom: number }) {
   const cells = useMemo(() => {
@@ -106,6 +125,7 @@ export default function WorldMap({
   selected,
   currentBounds,
   currentZoom,
+  flyTo,
   onSelect,
   onBoundsChange,
 }: {
@@ -113,6 +133,7 @@ export default function WorldMap({
   selected: SelectedCell | null;
   currentBounds: CellBounds | null;
   currentZoom: number;
+  flyTo: FlyTarget | null;
   onSelect: (cell: SelectedCell) => void;
   onBoundsChange: (bounds: CellBounds, zoom: number) => void;
 }) {
@@ -131,6 +152,8 @@ export default function WorldMap({
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         subdomains="abcd"
       />
+
+      <FlyController target={flyTo} />
 
       <GridOverlay bounds={currentBounds} zoom={currentZoom} />
 

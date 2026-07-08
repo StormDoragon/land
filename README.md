@@ -90,6 +90,15 @@ npm run dev
 # http://localhost:3000
 ```
 
+## Deploying to Vercel
+
+1. Import the repo into Vercel (Next.js is auto-detected, no config needed).
+2. Add two Environment Variables in the Vercel project settings (Production, Preview, and Development as needed):
+   - `DATABASE_URL` — a reachable PostgreSQL connection string (e.g. Vercel Postgres, Neon, Supabase, RDS).
+   - `AUTH_SECRET` — a long random string (`openssl rand -base64 32`).
+3. Deploy. The build runs `vercel-build` (`prisma generate && prisma migrate deploy && next build`), which applies any pending migrations against `DATABASE_URL` before building — no manual migration step required.
+4. Optional: run `npm run db:seed` locally against the production `DATABASE_URL` to create the demo account and landmark plots.
+
 ## Features
 
 - 🗺️ **Interactive world map** — pan/zoom anywhere; sold plots render as colored

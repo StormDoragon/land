@@ -39,6 +39,7 @@ model Plot {
   name          String?
   color         String   @default("#67e8f9")
   locationLabel String?
+  countryCode   String?  // ISO-3166 alpha-2, derived from the cell on purchase
   tier          PlotTier @default(BASIC)
   linkUrl       String?
   message       String?
@@ -56,6 +57,7 @@ model Plot {
   @@unique([gridX, gridY])
   @@index([centerLat, centerLng])
   @@index([ownerId])
+  @@index([countryCode])
 }
 
 enum ListingStatus {

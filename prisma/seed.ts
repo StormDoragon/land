@@ -38,6 +38,7 @@ interface Landmark {
   lat: number;
   lng: number;
   label: string;
+  countryCode: string;
   tier: PlotTier;
   linkUrl?: string;
   message?: string;
@@ -50,6 +51,7 @@ const LANDMARKS: Landmark[] = [
     lat: 48.8584,
     lng: 2.2945,
     label: "Paris, France",
+    countryCode: "FR",
     tier: "HOMEPAGE",
     linkUrl: "https://aplotinweb.com",
     message: "The most visible plot in the City of Light.",
@@ -59,6 +61,7 @@ const LANDMARKS: Landmark[] = [
     lat: 40.758,
     lng: -73.9855,
     label: "New York, USA",
+    countryCode: "US",
     tier: "FOUNDER",
     linkUrl: "https://aplotinweb.com",
     message: "Founding owner at the crossroads of the world.",
@@ -68,6 +71,7 @@ const LANDMARKS: Landmark[] = [
     lat: 41.8902,
     lng: 12.4922,
     label: "Rome, Italy",
+    countryCode: "IT",
     tier: "PREMIUM",
     message: "History, owned.",
   },
@@ -76,6 +80,7 @@ const LANDMARKS: Landmark[] = [
     lat: -33.8568,
     lng: 151.2153,
     label: "Sydney, Australia",
+    countryCode: "AU",
     tier: "CITY",
     message: "Down-under and on the map.",
   },
@@ -84,6 +89,7 @@ const LANDMARKS: Landmark[] = [
     lat: 35.6595,
     lng: 139.7005,
     label: "Tokyo, Japan",
+    countryCode: "JP",
     tier: "PREMIUM",
     message: "The busiest crossing on Earth.",
   },
@@ -92,6 +98,7 @@ const LANDMARKS: Landmark[] = [
     lat: -22.9519,
     lng: -43.2105,
     label: "Rio de Janeiro, Brazil",
+    countryCode: "BR",
     tier: "CITY",
     message: "Overlooking Rio.",
   },
@@ -127,6 +134,7 @@ async function main() {
         name: lm.name,
         color: TIER_COLOR[lm.tier],
         locationLabel: lm.label,
+        countryCode: lm.countryCode,
         tier: lm.tier,
         linkUrl: lm.linkUrl ?? null,
         message: lm.message ?? null,

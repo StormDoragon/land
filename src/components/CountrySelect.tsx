@@ -57,9 +57,9 @@ export function CountrySelect({
     setBusy(false);
     setOpen(false);
     setQuery("");
-    // The choice is persisted in a cookie; take the visitor to the map and
-    // re-render so the header and map both pick up the new scope.
-    router.push("/map");
+    // The choice is persisted in a cookie. Take the visitor to that country's
+    // page (or the world map for Global) and re-render so the header updates.
+    router.push(code === "GLOBAL" ? "/map" : `/country/${code}`);
     router.refresh();
   }
 

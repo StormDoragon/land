@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { cellFromIndices, isValidGridCell, TIERS } from "@/lib/grid";
-import { reverseGeocode } from "@/lib/geocode";
+import { reverseGeocodeDetailed } from "@/lib/geocode";
 
 const schema = z.object({
   gridX: z.number().int(),
@@ -38,7 +38,10 @@ export async function POST(req: Request) {
   const cell = cellFromIndices(gridX, gridY);
   const tierInfo = TIERS[tier];
 
-  const label = await reverseGeocode(cell.centerLat, cell.centerLng);
+  const { label, countryCode } = await reverseGeocodeDetailed(
+    cell.centerLat,
+    cell.centerLng,
+  );
 
   try {
     const plot = await prisma.$transaction(async (tx) => {
@@ -51,6 +54,7 @@ export async function POST(req: Request) {
           name: name || null,
           color: tierInfo.color,
           locationLabel: label,
+          countryCode,
           tier,
           linkUrl: linkUrl || null,
           message: message || null,

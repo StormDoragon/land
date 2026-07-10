@@ -25,6 +25,7 @@ export function Header({
 
         <nav className="hidden md:flex items-center gap-1 text-sm text-[var(--muted)]">
           <NavLink href="/map">Map</NavLink>
+          <NavLink href="/countries">Countries</NavLink>
           <NavLink href="/pricing">Pricing</NavLink>
           <NavLink href="/owners">Owners</NavLink>
           <NavLink href="/marketplace">Marketplace</NavLink>

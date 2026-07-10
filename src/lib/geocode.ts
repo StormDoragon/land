@@ -52,17 +52,28 @@ export async function searchAddress(
   }
 }
 
-export async function reverseGeocode(
+export interface ReverseGeocode {
+  /** Human-readable "City, Country" label, or null. */
+  label: string | null;
+  /** ISO-3166-1 alpha-2 country code, uppercase, or null. */
+  countryCode: string | null;
+}
+
+/**
+ * Reverse-geocode a point into a display label and its country code. Both
+ * fields degrade to null independently when the geocoder is unavailable.
+ */
+export async function reverseGeocodeDetailed(
   lat: number,
   lng: number,
-): Promise<string | null> {
+): Promise<ReverseGeocode> {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=10`;
     const res = await fetch(url, {
       headers: NOMINATIM_HEADERS,
       signal: AbortSignal.timeout(4000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { label: null, countryCode: null };
     const data = (await res.json()) as {
       address?: Record<string, string>;
       display_name?: string;
@@ -71,10 +82,23 @@ export async function reverseGeocode(
     const city =
       a.city || a.town || a.village || a.municipality || a.county || a.state;
     const country = a.country;
-    if (city && country) return `${city}, ${country}`;
-    if (country) return country;
-    return data.display_name?.split(",").slice(0, 2).join(",").trim() ?? null;
+    const countryCode = a.country_code ? a.country_code.toUpperCase() : null;
+
+    let label: string | null;
+    if (city && country) label = `${city}, ${country}`;
+    else if (country) label = country;
+    else label = data.display_name?.split(",").slice(0, 2).join(",").trim() ?? null;
+
+    return { label, countryCode };
   } catch {
-    return null;
+    return { label: null, countryCode: null };
   }
+}
+
+/** Back-compat helper returning just the display label. */
+export async function reverseGeocode(
+  lat: number,
+  lng: number,
+): Promise<string | null> {
+  return (await reverseGeocodeDetailed(lat, lng)).label;
 }
